@@ -17,6 +17,23 @@
 * adafruit_sdcard library from Adafruit_CircuitPython_Bundle ( https://github.com/adafruit/Adafruit_CircuitPython_Bundle )
 * adafruit_esp32spi, adafruit_hid library from Adafruit_CircuitPython_Bundle ( https://github.com/adafruit/Adafruit_CircuitPython_Bundle )
 
+## secrets.py example
+
+```
+secrets = [
+  {
+    "ssid": "my-home-wifi",
+    "password": "Password!092749",
+    "timezone": "Asia/Tokyo",  # Check http://worldtimeapi.org/timezones
+  },
+  {
+    "ssid": "my-office-wifi",
+    "password": "Secure#865981",
+    "timezone": "Asia/Tokyo",  # Check http://worldtimeapi.org/timezones
+  }
+]
+```
+
 # blog
 
 https://akkiesoft.hatenablog.jp/entry/20210605/1622863906

@@ -35,10 +35,15 @@ esp32_ready = DigitalInOut(board.GP10)
 esp32_reset = DigitalInOut(board.GP11)
 spi = busio.SPI(board.GP18, board.GP19, board.GP16)
 esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
-wifi = wifimanager.ESPSPI_WiFiManager(esp, secrets)
-wifi.connect()
-
-print("open this IP in your browser: ", esp.pretty_ip(esp.ip_address))
+ssid_list = esp.scan_networks()
+for secret in secrets:
+  print("Checking SSID:" + secret["ssid"])
+  for i in ssid_list:
+    if secret["ssid"] in i["ssid"]:
+      wifi = wifimanager.ESPSPI_WiFiManager(esp, secret)
+      wifi.connect()
+      print("open this IP in your browser: ", esp.pretty_ip(esp.ip_address))
+      break
 
 status = {
   200: "200 OK",
