@@ -19,16 +19,16 @@ colors = [
 ]
 
 keycodes = [
-    Keycode.ZERO,
-    Keycode.PERIOD,
-    Keycode.FORWARD_SLASH,
-    Keycode.ONE,
-    Keycode.TWO,
-    Keycode.THREE,
-    Keycode.FOUR,
-    Keycode.FIVE,
-    Keycode.SIX,
-    Keycode.SEVEN,
-    Keycode.EIGHT,
-    Keycode.NINE
+    [Keycode.ZERO],
+    [Keycode.PERIOD],
+    [Keycode.FORWARD_SLASH],
+    [Keycode.LEFT_SHIFT, Keycode.ONE],
+    [Keycode.TWO],
+    [Keycode.THREE],
+    [Keycode.FOUR],
+    [Keycode.FIVE],
+    [Keycode.SIX],
+    [Keycode.SEVEN],
+    [Keycode.EIGHT],
+    [Keycode.NINE]
 ]

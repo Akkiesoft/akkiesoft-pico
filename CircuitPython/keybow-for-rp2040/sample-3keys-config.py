@@ -9,7 +9,7 @@ colors = [
     (  0,   0, 255),
 ]
 keycodes = [
-    Keycode.ONE,
-    Keycode.TWO,
-    Keycode.THREE
+    [Keycode.LEFT_SHIFT, Keycode.ONE],
+    [Keycode.TWO],
+    [Keycode.THREE]
 ]

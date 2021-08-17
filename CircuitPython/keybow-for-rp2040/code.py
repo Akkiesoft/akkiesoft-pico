@@ -51,14 +51,16 @@ while True:
         if not b.value:
             if not sw[i]:
                 try:
-                    keyboard.press(keycodes[i])
                     dots[led_position(i)] = colors[i]
+                    for k in keycodes[i]:
+                        keyboard.press(k)
+                        sleep(0.05)
                     sw[i] = 1
                 except:
                     pass
         else:
             if sw[i]:
-                keyboard.release(keycodes[i])
+                keyboard.release_all()
                 dots[led_position(i)] = (0, 0, 0)
                 sw[i] = 0
     sleep(0.02)
