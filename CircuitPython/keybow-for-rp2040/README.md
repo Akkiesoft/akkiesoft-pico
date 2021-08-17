@@ -35,6 +35,15 @@ This script is for using Keybow & Keybow mini with Raspberry Pi Pico and Circuit
 | GPIO10(LED data)  | GP3                    |            |                 |
 | GPIO11(LED clock) | GP2                    |            |                 |
 
+## Files
+
+* code.py: Main program
+* config.py: Config file for key and led color assignment
+    * sample-3keys-config.py: Sample for Keybow mini
+    * sample-12keys-config.py: Sample for Keybow
+* boot.py: (only for CircuitPython => 7.0.0) A program that disables usb msd.
+    *  To enable usb msd, hold down 1-key while connecting the USB.
+
 ## blog
 
 https://akkiesoft.hatenablog.jp/entry/20210815/1629001574

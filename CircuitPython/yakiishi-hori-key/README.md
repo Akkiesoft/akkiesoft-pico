@@ -23,6 +23,12 @@ When short the D2 pin and GND pin by the jumper wire, the Raspberry Pi Pico send
 * adafruit_hid library from Adafruit_CircuitPython_Bundle ( https://github.com/adafruit/Adafruit_CircuitPython_Bundle )
 * jumper wire
 
+## Files
+
+* code.py: Main program
+* boot.py: (only for CircuitPython => 7.0.0) A program that disables usb msd.
+    *  To enable usb msd, hold down 1-key while connecting the USB.
+
 ## blog
 
 https://akkiesoft.hatenablog.jp/entry/20210523/1621778666
