@@ -32,6 +32,7 @@ game_time = 10
 direction = 0
 next_force_change = False
 LAST_TIME = -1
+FINGER_LAST_TIME = -1
 
 START_MSG = "<-PUSH"
 label_msg = label.Label(FONT, text=START_MSG, color=0xFFFFFF, x=0, y=4)
@@ -81,16 +82,18 @@ while True:
             update_score()
         continue
 
-    nyan = int(random.random() * 100)
-    if nyan % 30 == 0 or next_force_change:
-        next_force_change = False
-        direction = int(random.random() * 2)
-    if direction:
-        finger_left.hidden = False
-        finger_right.hidden = True
-    else:
-        finger_left.hidden = True
-        finger_right.hidden = False
+    if (FINGER_LAST_TIME + 0.1) <= now:
+        FINGER_LAST_TIME = now
+        nyan = int(random.random() * 100)
+        if nyan % 90 == 0 or next_force_change:
+            next_force_change = False
+            direction = int(random.random() * 2)
+        if direction:
+            finger_left.hidden = False
+            finger_right.hidden = True
+        else:
+            finger_left.hidden = True
+            finger_right.hidden = False
 
     if not btn_black.value:
         if not pressed_black:
