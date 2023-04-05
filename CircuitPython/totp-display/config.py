@@ -1,9 +1,16 @@
-totp_name_l1 = 'dokoka no'
-totp_name_l2 = 'service'
-totp_key = 'MIKUMIKUMOFUMOFU'
+totp1 = {
+    'label1': 'dokoka no',
+    'label2': 'service',
+    'key'   : 'MIKUMIKUMOFUMOFU',
+    'bgimg' : ''
+}
 
-# bgimg = "/bg.bmp"
-bgimg = ""
+totp2 = {
+    'label1': 'dokoka no',
+    'label2': 'service2',
+    'key'   : 'MIKUMOFUMIKUMOFU',
+    'bgimg' : ''
+}
 
 # 240x240 rectangle lcd: rowstart=80
 # 240x240 rounded lcd  : rowstart=40

@@ -18,10 +18,10 @@ import usb_hid
 from adafruit_hid.keyboard import Keyboard
 from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
 from adafruit_hid.keycode import Keycode
-from digitalio import DigitalInOut, Direction, Pull
+from digitalio import DigitalInOut, Pull
 
 # Config
-from config import totp_name_l1, totp_name_l2, totp_key, bgimg, rowstart
+from config import totp1, totp2, rowstart
 UTC_OFFSET = 9   # time zone offset
 DISPLAY_RATE = 1 # screen refresh rate
 
@@ -47,8 +47,11 @@ display = ST7789(
 center = display.width // 2
 display.root_group = Group()
 
-if bgimg:
-    bitmap = OnDiskBitmap(bgimg)
+btn = DigitalInOut(board.GP3)
+btn.switch_to_input(pull=Pull.UP)
+totp = totp1 if btn.value else totp2
+if 'bgimg' in totp:
+    bitmap = OnDiskBitmap(totp['bgimg'])
     tile_grid = TileGrid(bitmap, pixel_shader=bitmap.pixel_shader)
     display.root_group.append(tile_grid)
 
@@ -56,11 +59,11 @@ if bgimg:
 # http://www.squaregear.net/fonts/
 font_code = bitmap_font.load_font("/secrcode_28.bdf")
 
-name1 = label.Label(FONT, text=totp_name_l1, color=0xFFFFFF, scale=2)
+name1 = label.Label(FONT, text=totp['label1'], color=0xFFFFFF, scale=2)
 name1.anchor_point = (0.5, 0.0)
 name1.anchored_position = (center, 10)
 display.root_group.append(name1)
-name2 = label.Label(FONT, text=totp_name_l2, color=0xFFFFFF, scale=2)
+name2 = label.Label(FONT, text=totp['label2'], color=0xFFFFFF, scale=2)
 name2.anchor_point = (0.5, 0.0)
 name2.anchored_position = (center, 30)
 display.root_group.append(name2)
@@ -88,13 +91,8 @@ keyboard = Keyboard(usb_hid.devices)
 keyboard_layout = KeyboardLayoutUS(keyboard)
 code_sent = False
 
-btn = DigitalInOut(board.GP3)
-btn.direction = Direction.INPUT
-btn.pull = Pull.UP
-
-
 last_compute = last_update = time.time()
-totp_code = generate_otp(timebase(last_compute), totp_key)
+totp_code = generate_otp(timebase(last_compute), totp['key'])
 
 while True:
     now = time.time()
@@ -109,7 +107,7 @@ while True:
         progress_bar.bar_color = 0x00FF00
     # update codes
     if bar_value < 0.5 and now - last_compute > 2:
-        totp_code = generate_otp(timebase(now), totp_key)
+        totp_code = generate_otp(timebase(now), totp['key'])
         last_compute = now
     # update display
     if now - last_update > DISPLAY_RATE:
