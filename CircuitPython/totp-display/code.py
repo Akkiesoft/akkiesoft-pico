@@ -1,12 +1,12 @@
 # based on: https://learn.adafruit.com/macropad-2fa-totp-authentication-friend/project-code
 
 import board
-import busio
 import time
 import adafruit_ds3231
 import rtc
 from  totp import generate_otp
 # display
+from busio import I2C, SPI
 from displayio import release_displays, FourWire, Group, OnDiskBitmap, TileGrid
 from terminalio import FONT
 from adafruit_st7789 import ST7789
@@ -26,7 +26,7 @@ UTC_OFFSET = 9   # time zone offset
 DISPLAY_RATE = 1 # screen refresh rate
 
 # RTC setup
-i2c    = busio.I2C(board.GP5, board.GP4)
+i2c    = I2C(board.GP5, board.GP4)
 ds3231 = adafruit_ds3231.DS3231(i2c)
 rtc.set_time_source(ds3231)
 def timebase(timetime):
@@ -39,7 +39,7 @@ tft_dc    = board.GP16
 spi_mosi  = board.GP19
 spi_clk   = board.GP18
 backlight = board.GP20
-spi = busio.SPI(spi_clk, spi_mosi)
+spi = SPI(spi_clk, spi_mosi)
 display_bus = FourWire(spi, command=tft_dc, chip_select=tft_cs)
 display = ST7789(
     display_bus, rotation=180, width=240, height=240, rowstart=rowstart, backlight_pin=backlight
