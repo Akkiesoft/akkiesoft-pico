@@ -111,15 +111,15 @@ while True:
         last_compute = now
     # update display
     if now - last_update > DISPLAY_RATE:
-        code.text = totp_code
         tt = time.localtime()
         rtc_date.text = "{:04}/{:02}/{:02}".format(tt.tm_year, tt.tm_mon, tt.tm_mday)
         rtc_time.text = "{:02}:{:02}:{:02}".format(tt.tm_hour, tt.tm_min, tt.tm_sec)
         last_update = now
+        code.text = totp_code
     # send totp_code if button pressed
     if not btn.value:
         if not code_sent:
             code_sent = True
-            keyboard_layout.write(totp_code)
+            keyboard_layout.write("%s\n" % totp_code)
     else:
         code_sent = False
