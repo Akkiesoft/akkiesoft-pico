@@ -29,8 +29,6 @@ DISPLAY_RATE = 1 # screen refresh rate
 i2c    = I2C(board.GP5, board.GP4)
 ds3231 = adafruit_ds3231.DS3231(i2c)
 rtc.set_time_source(ds3231)
-def timebase(timetime):
-    return (timetime - (UTC_OFFSET*3600)) // 30
 
 # Display setup
 release_displays()
@@ -92,7 +90,7 @@ keyboard_layout = KeyboardLayoutUS(keyboard)
 code_sent = False
 
 last_compute = last_update = time.time()
-totp_code = generate_otp(timebase(last_compute), totp['key'])
+totp_code = generate_otp(last_compute // 30, totp['key'])
 
 while True:
     now = time.time()
@@ -107,11 +105,11 @@ while True:
         progress_bar.bar_color = 0x00FF00
     # update codes
     if bar_value < 0.5 and now - last_compute > 2:
-        totp_code = generate_otp(timebase(now), totp['key'])
+        totp_code = generate_otp(now // 30, totp['key'])
         last_compute = now
     # update display
     if now - last_update > DISPLAY_RATE:
-        tt = time.localtime()
+        tt = time.localtime(UTC_OFFSET * 3600 + now)
         rtc_date.text = "{:04}/{:02}/{:02}".format(tt.tm_year, tt.tm_mon, tt.tm_mday)
         rtc_time.text = "{:02}:{:02}:{:02}".format(tt.tm_hour, tt.tm_min, tt.tm_sec)
         last_update = now
