@@ -1,12 +1,10 @@
 # based on: https://learn.adafruit.com/macropad-2fa-totp-authentication-friend/project-code
-
 import board
 import time
-import adafruit_ds3231
 import rtc
-from  totp import generate_otp
+from totp import generate_otp
 # display
-from busio import I2C, SPI
+from busio import SPI
 from displayio import release_displays, FourWire, Group, OnDiskBitmap, TileGrid
 from terminalio import FONT
 from adafruit_st7789 import ST7789
@@ -21,14 +19,9 @@ from adafruit_hid.keycode import Keycode
 from digitalio import DigitalInOut, Pull
 
 # Config
-from config import totp1, totp2, rowstart
+from config import totp1, totp2, rowstart, time_sync
 UTC_OFFSET = 9   # time zone offset
 DISPLAY_RATE = 1 # screen refresh rate
-
-# RTC setup
-i2c    = I2C(board.GP5, board.GP4)
-ds3231 = adafruit_ds3231.DS3231(i2c)
-rtc.set_time_source(ds3231)
 
 # Display setup
 release_displays()
@@ -71,12 +64,12 @@ code.anchor_point = (0.5, 0.0)
 code.anchored_position = (center, 90)
 display.root_group.append(code)
 
-rtc_date = label.Label(FONT, text="----/--/--", scale=2)
+rtc_date = label.Label(FONT, scale=2)
 rtc_date.anchor_point = (0.5, 0.5)
 rtc_date.anchored_position = (center, 180)
 display.root_group.append(rtc_date)
 
-rtc_time = label.Label(FONT, text="--:--:--", scale=2)
+rtc_time = label.Label(FONT, scale=2)
 rtc_time.anchor_point = (0.5, 0.5)
 rtc_time.anchored_position = (center, 200)
 display.root_group.append(rtc_time)
@@ -84,7 +77,46 @@ display.root_group.append(rtc_time)
 progress_bar = HorizontalProgressBar((55, 130), (130, 17), bar_color=0xFFFFFF, min_value=0, max_value=30)
 display.root_group.append(progress_bar)
 
-#HID setup
+# RTC/NTP setup
+if time_sync['type'] == 'ds3231':
+    rtc_date.text = "Loading"
+    rtc_time.text = "from RTC."
+    import adafruit_ds3231
+    from busio import I2C
+    i2c = I2C(board.GP5, board.GP4)
+    source = adafruit_ds3231.DS3231(i2c)
+elif time_sync['type'] == 'rv3028':
+    rtc_date.text = "Loading"
+    rtc_time.text = "from RTC."
+    from pimoroni_circuitpython_adapter import not_SMBus as SMBus
+    from rv3028 import RV3028
+    i2c = SMBus(SDA = board.GP4, SCL = board.GP5)
+    source = RV3028(i2c_dev = i2c)
+    source.set_battery_switchover('level_switching_mode')
+elif time_sync['type'] == 'ntp':
+    rtc_date.text = "Wi-Fi"
+    rtc_time.text = "Connecting."
+    import wifi
+    import socketpool
+    import adafruit_ntp
+    time.sleep(0.1)
+    try:
+        wifi.radio.connect(time_sync['ssid'], time_sync['password'])
+        rtc_date.text = "Syncing time"
+        rtc_time.text = "with NTP"
+        pool = socketpool.SocketPool(wifi.radio)
+        ntp = adafruit_ntp.NTP(pool, tz_offset=0, server=time_sync['ntp_server'])
+        source = rtc.RTC()
+        source.datetime = ntp.datetime
+    except:
+        rtc_date.text = "Time sync failed"
+        rtc_time.text = "Resetting."
+        time.sleep(3)
+        from microcontroller import reset
+        reset()
+rtc.set_time_source(source)
+
+# HID setup
 keyboard = Keyboard(usb_hid.devices)
 keyboard_layout = KeyboardLayoutUS(keyboard)
 code_sent = False
