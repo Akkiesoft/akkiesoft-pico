@@ -6,6 +6,8 @@ Raspberry Pi Picoサイズの変換基板を自作して、CircuitPythonで利�
 
 ![board photo](image/board1.jpg)
 
+[ブログ](https://akkiesoft.hatenablog.jp/entry/20230426/1682512301)
+
 ## スクリプトについて
 
 スクリプトは下記の記事などをベースに、Raspberry Pi PicoおよびCircuitPythonで動作するように改変したものです。
