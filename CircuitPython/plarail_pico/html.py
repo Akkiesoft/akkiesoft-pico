@@ -62,10 +62,10 @@ body { background: #777777; width: 100%; font-family: sans-serif; }
   </div>
 <span id="contvalue">-</span>
 </div>
-<div class="center" id="result"></div>
-<!--<div class="center">
+<div class="center" id="result">-</div>
+<div class="center">
 前 <input id="dir" type="range" value="0" min="0" max="1" step="1" onchange="updatedir()" /> 後
-</div>-->
+</div>
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 </body>
 
@@ -87,11 +87,11 @@ function updatespeed() {
   });
 }
 function updatedir() {
-  if (document.getElementById('dir').value == 1) {
-    fetch('/BK', { method: 'GET' })
-  } else {
-    fetch('/FW', { method: 'GET' })
-  }
+  var elem = document.getElementById('dir');
+  var dir = elem.value;
+  fetch('/DIR/' + dir, { method: 'GET' }).then(function(r){ return r.text() }).then(function(t){
+    if (t == "X") { elem.value = 1 - dir; }
+  });
 }
 </script>
 </html>

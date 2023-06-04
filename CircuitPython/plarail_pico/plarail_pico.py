@@ -24,6 +24,7 @@ class Plarail:
             return
         if 0 <= self.direction:
             self.pwm_a.deinit()
+            self.pwm_b.deinit()
         self.pwm_a = pwmio.PWMOut(self.gpio[direction], variable_frequency=True)
         self.pwm_b = DigitalInOut(self.gpio[1 - direction])
         self.pwm_b.direction = Direction.OUTPUT
@@ -118,7 +119,14 @@ mdns.hostname = "plarail"
 def root(request: HTTPRequest):
     with HTTPResponse(request, content_type=MIMEType.TYPE_HTML) as response:
         response.send(html())
-
+@server.route("/DIR/<direction>")
+def DIR(request: HTTPRequest, direction: int):
+    with HTTPResponse(request, content_type=MIMEType.TYPE_HTML) as response:
+        if plarail.speed == 0:
+            plarail.set_direction(int(direction))
+            response.send(direction)
+        else:
+            response.send("X")
 @server.route("/EB")
 def EB(request: HTTPRequest):
     with HTTPResponse(request, content_type=MIMEType.TYPE_HTML) as response:
