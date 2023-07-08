@@ -11,13 +11,12 @@
 #    * You'll need to convert otb to bdf with FontForge yourself
 
 # System/Wi-Fi
-import os
+import sys
 from time import localtime
-import wifi
-import socketpool
 from json import loads as json_loads
-# HTTP(S)  client
-import ssl
+from akkie_wifi import akkie_wifi
+from akkie_wifi_config import ap_list
+# client
 import adafruit_requests
 # NTP
 import adafruit_ntp
@@ -88,23 +87,14 @@ display = adafruit_uc8151d.UC8151D(
 )
 display.root_group = displayio.Group()
 
-print("Connecting to Wi-Fi...")
-wifi.radio.connect(os.getenv('CIRCUITPY_WIFI_SSID'), os.getenv('CIRCUITPY_WIFI_PASSWORD'))
-print("Connected.")
-pool = socketpool.SocketPool(wifi.radio)
-# to DISABLE to verifying ssl certs
-# https://github.com/adafruit/circuitpython/issues/7656
-ssl_context = ssl.create_default_context()
-ssl_context.load_verify_locations(cadata="")
-requests = adafruit_requests.Session(pool, ssl_context)
+wifi = akkie_wifi(ap_list)
+wifi.connect()
+if not wifi.connected:
+    sys.exit()
 
-ntp_addr = os.getenv('NTP_ADDRESS')
-if ntp_addr:
-    print("Get the time from NTP...")
-    ntp = adafruit_ntp.NTP(pool, tz_offset=9, server=os.getenv('NTP_ADDRESS'))
-    r = rtc.RTC()
-    r.datetime = ntp.datetime
-    rtc.set_time_source(r)
+print("Get the time from NTP...")
+ntp = adafruit_ntp.NTP(wifi.pool, tz_offset=9, server="pool.ntp.org")
+rtc.set_time_source(ntp)
 
 # -----
 
@@ -121,6 +111,7 @@ def show_forecast(display, w):
 
     # Get forecast data
     url = "https://www.jma.go.jp/bosai/forecast/data/forecast/%s.json" % w['area_code']
+    requests = adafruit_requests.Session(wifi.pool, wifi.ssl_context)
     response = requests.get(url)
     data = json_loads(response.text)
     response.close()
@@ -172,6 +163,8 @@ display.root_group.append(mi)
 if not startup_weather is None:
     show_forecast(display, weather_list[startup_weather])
 
+wifi.disconnect()
+
 # Buttons
 buttons = [
     DigitalInOut(board.GP12),
@@ -191,4 +184,6 @@ while True:
         if not b.value and not display.time_to_refresh:
             if len(weather_list) <= i:
                 continue
+            wifi.connect()
             show_forecast(display, weather_list[i])
+            wifi.disconnect()
