@@ -21,7 +21,7 @@ This script is for using Keybow & Keybow mini with Raspberry Pi Pico and Circuit
 | Raspberry Pi GPIO | Raspberry Pi Pico GPIO | Keybow Key | Keybow mini key |
 | ----------------- | ---------------------- | ---------- | --------------- |
 | GPIO17            | GP11                   | 1          | 1               |
-| GPIO22            | GP12                   | 2          |                 |
+| GPIO27            | GP12                   | 2          |                 |
 | GPIO23            | GP13                   | 3          |                 |
 | GPIO22            | GP14                   | 4          | 2               |
 | GPIO24            | GP15                   | 5          |                 |
