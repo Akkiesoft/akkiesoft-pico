@@ -52,7 +52,6 @@ msg.anchor_point = (0.5, 0.5)
 msg.anchored_position = (center, center)
 msg.hidden = True
 display.root_group.append(msg)
-display.show(display.root_group)
 
 wifi = akkie_wifi(ap_list)
 

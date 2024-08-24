@@ -37,14 +37,15 @@ display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs)
 display = ST7789(
     display_bus, rotation=180, width=240, height=240, rowstart=80, backlight_pin=backlight
 )
+display.root_group = displayio.Group()
 center = display.width // 2
 
 i2c = I2C(board.GP5, board.GP4)
 bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=0x76)
 
-splash_bme = displayio.Group()
+splash = display.root_group
 name2 = label.Label(FONT, text="", color=0xFFFFFF, scale=2)
-splash_bme.append(name2)
+splash.append(name2)
 name2.x = 5
 name2.y = 10
 
@@ -63,7 +64,6 @@ tile_grid = displayio.TileGrid(
     tile_height = 240
 )
 splash.append(tile_grid)
-display.show(splash)
 
 show_count = 0
 show_mode = 0
@@ -80,11 +80,11 @@ while True:
         show_mode = 1 - show_mode
         if show_mode:
             # bme280 mode
-            splash_bme.hidden = False
+            splash.hidden = False
             splash.hidden = True
-            display.show(splash_bme)
+            display.show(splash)
         else:
-            splash_bme.hidden = True
+            splash.hidden = True
             splash.hidden = False
             display.show(splash)
     if show_count == 60:

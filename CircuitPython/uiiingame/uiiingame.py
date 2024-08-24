@@ -12,8 +12,8 @@ displayio.release_displays()
 i2c = busio.I2C(board.GP21, board.GP20)
 display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
 display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=64, rotation=180)
-splash = displayio.Group()
-display.show(splash)
+display.root_group = displayio.Group()
+splash = display.root_group
 
 btn_black = DigitalInOut(board.GP7)
 btn_black.direction = Direction.INPUT
