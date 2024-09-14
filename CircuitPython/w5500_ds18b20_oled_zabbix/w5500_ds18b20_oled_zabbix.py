@@ -13,7 +13,7 @@ import json
 import struct
 # Ethernet
 from adafruit_wiznet5k.adafruit_wiznet5k import WIZNET5K
-from adafruit_wiznet5k.adafruit_wiznet5k_socket import socket
+from adafruit_wiznet5k.adafruit_wiznet5k_socketpool import SocketPool
 # 1-wire
 from adafruit_onewire.bus import OneWireBus
 import adafruit_ds18x20
@@ -50,7 +50,7 @@ def zabbix_send(ip, data, port=10051, timeout=5):
 
     print("Sending data...")
     host_address = (ip, port)
-    client_sock = socket()
+    client_sock = SocketPool.socket()
     client_sock.settimeout(timeout)
     client_sock.sendto(http_request, host_address)
 
@@ -62,6 +62,28 @@ def zabbix_send(ip, data, port=10051, timeout=5):
         result += data
     client_sock.close()
     print(result.decode('utf-8'))
+
+def link_up(eth, label):
+    if USE_DHCP:
+        eth.set_dhcp()
+    else:
+        eth.ifconfig = (IP_ADDRESS, SUBNET_MASK, GATEWAY_ADDRESS, DNS_SERVER)
+    my_ip = eth.pretty_ip(eth.ip_address)
+    print("My IP address is:", my_ip)
+    label.text = "IP: %s" % my_ip
+
+
+# Init OLED
+displayio.release_displays()
+i2c = busio.I2C(I2C_SCL, I2C_SDA)
+display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
+display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=32)
+display.root_group = displayio.Group()
+splash = display.root_group
+text_myip = label.Label(FONT, text="IP: Checking", color=0xFFFFFF, x=0, y=4)
+splash.append(text_myip)
+text_temp = label.Label(FONT, text="Temp: ", color=0xFFFFFF, x=0, y=20)
+splash.append(text_temp)
 
 
 # Init W5500
@@ -76,14 +98,16 @@ ethernetRst.value = True
 spi_bus = busio.SPI(SPI1_SCK, MOSI=SPI1_TX, MISO=SPI1_RX)
 cs = digitalio.DigitalInOut(SPI1_CSn)
 
-eth = WIZNET5K(spi_bus, cs, mac=MY_MAC, is_dhcp=USE_DHCP)
-if not USE_DHCP:
-    eth.ifconfig = (IP_ADDRESS, SUBNET_MASK, GATEWAY_ADDRESS, DNS_SERVER)
-
-my_ip = eth.pretty_ip(eth.ip_address)
+lan_connected = False
+eth = WIZNET5K(spi_bus, cs)
 print("Chip Version:", eth.chip)
 print("MAC Address:", [hex(i) for i in eth.mac_address])
-print("My IP address is:", my_ip)
+time.sleep(1)
+if eth.link_status:
+    link_up(eth, text_myip)
+    lan_connected = True
+else:
+    text_myip.text = "IP: Linkdown"
 
 
 # Init 1-wire
@@ -92,27 +116,26 @@ devices = ow_bus.scan()
 ds18b20 = adafruit_ds18x20.DS18X20(ow_bus, devices[0])
 
 
-# Init OLED
-displayio.release_displays()
-i2c = busio.I2C(I2C_SCL, I2C_SDA)
-display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
-display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=32)
-display.root_group = displayio.Group()
-splash = display.root_group
-text_myip = label.Label(FONT, text="IP: %s" % my_ip, color=0xFFFFFF, x=0, y=4)
-splash.append(text_myip)
-text_temp = label.Label(FONT, text="Temp: ", color=0xFFFFFF, x=0, y=20)
-splash.append(text_temp)
-
 while True:
-    temperature = '{0:0.3f}'.format(ds18b20.temperature)
-    text_temp.text = "Temp: %s C" % (temperature)
-    if time.time() % 60 == 0 and zabbix_server:
-        data = json.dumps({
-            "request":"sender data",
-            "data":[
-                {"host":"pico-w5500","key":"ds18b20.temp","value":temperature}
-            ]
-        })
-        zabbix_send(zabbix_server, data)
+    try:
+        temperature = '{0:0.3f}'.format(ds18b20.temperature)
+        text_temp.text = "Temp: %s C" % (temperature)
+        if eth.link_status:
+            if not lan_connected:
+                link_up(eth, text_myip)
+                lan_connected = True
+            if time.time() % 60 == 0 and zabbix_server and lan_connected:
+                data = json.dumps({
+                    "request":"sender data",
+                    "data":[
+                        {"host":"pico-w5500","key":"ds18b20.temp","value":temperature}
+                    ]
+                })
+                zabbix_send(zabbix_server, data)
+        else:
+            if lan_connected:
+                text_myip.text = "IP: Linkdown"
+                lan_connected = False
+    except:
+        pass
     time.sleep(1)
