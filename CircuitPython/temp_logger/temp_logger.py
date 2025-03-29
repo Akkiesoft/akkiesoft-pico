@@ -11,6 +11,8 @@ import os
 import sys
 import rtc
 import time
+import microcontroller
+import storage
 import board
 from busio import I2C
 from digitalio import DigitalInOut, Direction, Pull
@@ -26,7 +28,7 @@ import adafruit_requests
 # set timezone
 UTC_OFFSET = 9 * 3600
 # select bme280 or bme680
-seonsor_model = "bme680"
+seonsor_model = "bme280"
 
 # misskey configuration
 token = ''
@@ -49,23 +51,11 @@ else:
     print("An invalid sensor type was specified.")
     sys.exit()
 
-# wifi
-# TODO: この辺のエラーハンドリング。時刻同期に失敗したらログしないとか
-wifi = akkie_wifi(ap_list, hostname="temp-logger")
-wifi.connect()
-requests = adafruit_requests.Session(wifi.pool, wifi.ssl_context)
-server = Server(wifi.pool)
-print(str(wifi.ipv4_address))
-ntp = adafruit_ntp.NTP(wifi.pool, tz_offset=0, server="ntp.nict.jp")
-source = rtc.RTC()
-source.datetime = ntp.datetime
-
-
 # init variables
 indexhtml = """
 <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body {font-family:sans-serif;}</style></head><body><h2>🌡 <span id="t"></span> ℃</h2><h2>💧 <span id="h"></span> %</h2><h2>🌀 <span id="p"></span> hPa</h2><div><span id="date"></span> <span id="time"></span><div style="margin-top:1em;"><button id="btn" onclick="post();">Post to Misskey</button><span id="post_result"></span></div></body>
 <script>
-  function update_now() { fetch("/now").then(function(r){ return r.json(); }).then(function(j){ document.getElementById("t").innerText = j.temperature; document.getElementById("h").innerText = j.humidity; document.getElementById("p").innerText = j.pressure; document.getElementById("date").innerText = j.date; document.getElementById("time").innerText = j.time; }); setTimeout("update_now()", 3000); }
+  function update_now() { fetch("/now.json").then(function(r){ return r.json(); }).then(function(j){ document.getElementById("t").innerText = j.temperature; document.getElementById("h").innerText = j.humidity; document.getElementById("p").innerText = j.pressure; document.getElementById("date").innerText = j.date; document.getElementById("time").innerText = j.time; }); setTimeout("update_now()", 3000); }
   function post() { let result = document.getElementById("post_result"); result.innerText = ""; let btn = document.getElementById("btn"); btn.disabled = true; fetch("/post", {method:"POST"}).then(function(r){ return r.text(); }).then(function(j){ result.innerText = j; btn.disabled = false; }); }
   window.onload = function(){ update_now(); }
 </script></html>
@@ -73,34 +63,38 @@ indexhtml = """
 filename = ""
 pressed = False
 zero_flag = False
-fs_readable = False
 
 def get_data():
     now = time.localtime(time.time() + UTC_OFFSET)
     return {
         "date": "%02i/%02i/%02i" % (now[0], now[1], now[2]),
         "time": "%02i:%02i:%02i" % (now[3], now[4], now[5]),
+        "filesystem_programmable": fs_readonly,
         "temperature": round(sensor.temperature, 2),
         "humidity": round(sensor.humidity, 2),
         "pressure": round(sensor.pressure, 2)
     }
 
+def get_filename(now, filename):
+    filename_new = "/%02i%02i%02i.csv" % (now[0], now[1], now[2])
+    if filename != filename_new:
+        # 日付が変わったので新しいファイルを作る
+        filename = filename_new
+        try:
+            os.stat(filename)
+        except OSError:
+            write_line(filename, 'Date,Time,Temperature,Humidity,Pressure')
+    return
+
 def write_line(filename, line):
-    global fs_readable
     try:
-       if not fs_readable:
+       if not fs_readonly:
             with open(filename, 'a') as f:
                 f.write(line + "\n")
     except OSError:
-        if not fs_readable:
+        print("Failed to write text to file.")
+        if fs_readonly:
             print("The file system is read-only.")
-        fs_readable = True
-
-def touch_file(filename):
-    try:
-        os.stat(filename)
-    except OSError:
-        write_line(filename, 'Date,Time,Temperature,Humidity,Pressure')
 
 def record_log(filename):
     data = get_data()
@@ -108,26 +102,43 @@ def record_log(filename):
     print(row)
     write_line(filename, row)
 
+
+try:
+    fs_readonly = storage.getmount("/").readonly
+
+    wifi = akkie_wifi(ap_list, hostname="temp-logger")
+    wifi.connect()
+    requests = adafruit_requests.Session(wifi.pool, wifi.ssl_context)
+    server = Server(wifi.pool)
+    print(str(wifi.ipv4_address))
+    ntp = adafruit_ntp.NTP(wifi.pool, tz_offset=0, server="ntp.nict.jp")
+    source = rtc.RTC()
+    source.datetime = ntp.datetime
+    now = time.localtime(time.time() + UTC_OFFSET)
+    filename = get_filename(now, filename)
+except Exception as e:
+    print(e)
+    print("Resetting in 10 seconds.")
+    time.sleep(10)
+    # ハードリセット
+    microcontroller.reset()
+
 @server.route("/")
 def root(request: Request):
     return Response(request, indexhtml, content_type="text/html")
 
-@server.route("/now")
+@server.route("/now.json")
 def now(request: Request):
     return JSONResponse(request, get_data())
 
 @server.route("/today.csv")
 def csv_download(request: Request):
-    global filename
-    with open(filename) as f:
-        result = f.read()
+    if fs_readonly:
+        result = "Boot mode is read-only. To access this URL, please restart in writable mode."
+    else:
+        with open(filename) as f:
+            result = f.read()
     return Response(request, result, content_type="text/plain")
-
-@server.route("/fs")
-def fs(request: Request):
-    global fs_readable
-    result = "readable" if fs_readable else "writable"
-    return Response(request, result, content_type="text/html")
 
 @server.route("/post", "POST")
 def post_data(request: Request):
@@ -150,24 +161,32 @@ while True:
     except:
         pass
 
-    # Recording
-    now = time.localtime(time.time() + UTC_OFFSET)
-    if now.tm_sec == 0:
-        if not zero_flag:
-            zero_flag = True
-            filename_new = "/%02i%02i%02i.csv" % (now[0], now[1], now[2])
-            if filename != filename_new:
-                filename = filename_new
-                touch_file(filename)
-            record_log(filename)
-    else:
-        if zero_flag:
-            zero_flag = False
+    try:
+        # Recording
+        now = time.localtime(time.time() + UTC_OFFSET)
+        if now.tm_sec == 0:
+            if not zero_flag:
+                zero_flag = True
+                filename = get_filename(now, filename)
+                record_log(filename)
+        else:
+            if zero_flag:
+                zero_flag = False
 
-    if not btn.value:
-        if not pressed:
-            pressed = True
-    else:
-        pressed = False
-
-    time.sleep(0.1)
+        if not btn.value:
+            if not pressed:
+                pressed = True
+        else:
+            pressed = False
+        time.sleep(0.1)
+    except Exception as e:
+        try:
+            print("%s" % e)
+            write_line(filename, "%s" % e)
+        except:
+            # これすらエラーになる分はどうしようもないのでパス
+            pass
+        print("Resetting in 10 seconds.")
+        time.sleep(10)
+        # ハードリセット
+        microcontroller.reset()
