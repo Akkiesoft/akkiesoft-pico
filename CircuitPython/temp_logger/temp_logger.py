@@ -11,6 +11,7 @@ import os
 import sys
 import rtc
 import time
+import supervisor
 import microcontroller
 import storage
 import board
@@ -123,10 +124,10 @@ try:
     filename = get_filename(now, filename)
 except Exception as e:
     print("(network) %s" % e)
-    print("Resetting in 10 seconds.")
-    time.sleep(10)
-    # ハードリセット
-    microcontroller.reset()
+    print("Soft-resetting in 3 seconds.")
+    time.sleep(3)
+    # ソフトリセット
+    supervisor.reload()
 
 @server.route("/")
 def root(request: Request):
