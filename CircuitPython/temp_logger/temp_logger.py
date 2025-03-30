@@ -1,5 +1,5 @@
 # BME280/680 temperature logger
-# 2024 Akkiesoft / MIT License
+# 2024-2025 Akkiesoft / MIT License
 
 # Following libraries are required:
 #     adafruit_bme280 or adafruit_bme680
