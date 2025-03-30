@@ -65,46 +65,51 @@ pressed = False
 zero_flag = False
 
 def get_data():
-    now = time.localtime(time.time() + UTC_OFFSET)
-    return {
-        "date": "%02i/%02i/%02i" % (now[0], now[1], now[2]),
-        "time": "%02i:%02i:%02i" % (now[3], now[4], now[5]),
-        "filesystem_programmable": fs_readonly,
-        "temperature": round(sensor.temperature, 2),
-        "humidity": round(sensor.humidity, 2),
-        "pressure": round(sensor.pressure, 2)
-    }
+    try:
+        now = time.localtime(time.time() + UTC_OFFSET)
+        return {
+            "date": "%02i/%02i/%02i" % (now[0], now[1], now[2]),
+            "time": "%02i:%02i:%02i" % (now[3], now[4], now[5]),
+            "filesystem_logging_mode": fs_programmable_mode,
+            "temperature": round(sensor.temperature, 2),
+            "humidity": round(sensor.humidity, 2),
+            "pressure": round(sensor.pressure, 2)
+        }
+    except Exception as e:
+        print("failed to get sensor data: %s" % e)
 
 def get_filename(now, filename):
     filename_new = "/%02i%02i%02i.csv" % (now[0], now[1], now[2])
     if filename != filename_new:
-        # 日付が変わったので新しいファイルを作る
+        # 起動直後もしくは日付が変わったか
         filename = filename_new
         try:
             os.stat(filename)
         except OSError:
+            # ファイルがないので新しいファイルを作る
             write_line(filename, 'Date,Time,Temperature,Humidity,Pressure')
-    return
+    return filename
 
 def write_line(filename, line):
     try:
-       if not fs_readonly:
-            with open(filename, 'a') as f:
-                f.write(line + "\n")
-    except OSError:
-        print("Failed to write text to file.")
-        if fs_readonly:
-            print("The file system is read-only.")
+        with open(filename, 'a') as f:
+            f.write("%s\n" % line)
+    except Exception as e:
+        print("Failed to write text to file: %s" % e)
 
 def record_log(filename):
-    data = get_data()
-    row = "%s,%s,%s,%s,%s" % (data["date"], data["time"], data["temperature"], data["humidity"], data["pressure"])
-    print(row)
-    write_line(filename, row)
-
+    try:
+        data = get_data()
+        row = "%s,%s,%s,%s,%s" % (data["date"], data["time"], data["temperature"], data["humidity"], data["pressure"])
+        print(row)
+        if not fs_programmable_mode:
+            write_line(filename, row)
+    except Exception as e:
+        print("failed to record sensor data: %s" % e)
 
 try:
-    fs_readonly = storage.getmount("/").readonly
+    fs_programmable_mode = storage.getmount("/").readonly
+    print("fs_programmable_mode is %s" % fs_programmable_mode)
 
     wifi = akkie_wifi(ap_list, hostname="temp-logger")
     wifi.connect()
@@ -117,7 +122,7 @@ try:
     now = time.localtime(time.time() + UTC_OFFSET)
     filename = get_filename(now, filename)
 except Exception as e:
-    print(e)
+    print("(network) %s" % e)
     print("Resetting in 10 seconds.")
     time.sleep(10)
     # ハードリセット
@@ -133,8 +138,8 @@ def now(request: Request):
 
 @server.route("/today.csv")
 def csv_download(request: Request):
-    if fs_readonly:
-        result = "Boot mode is read-only. To access this URL, please restart in writable mode."
+    if fs_programmable_mode:
+        result = "Boot mode is programmable. To access this URL, please restart in logging mode."
     else:
         with open(filename) as f:
             result = f.read()
@@ -181,7 +186,7 @@ while True:
         time.sleep(0.1)
     except Exception as e:
         try:
-            print("%s" % e)
+            print("(mainloop) %s" % e)
             write_line(filename, "%s" % e)
         except:
             # これすらエラーになる分はどうしようもないのでパス
