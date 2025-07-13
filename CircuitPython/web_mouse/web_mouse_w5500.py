@@ -11,8 +11,8 @@ import board
 import busio
 import digitalio
 import time
+from adafruit_connection_manager import get_radio_socketpool
 from adafruit_wiznet5k.adafruit_wiznet5k import WIZNET5K
-import adafruit_wiznet5k.adafruit_wiznet5k_socket as socket
 # for Web Server
 from adafruit_httpserver import Server, Request, Response
 # for USB HID
@@ -48,8 +48,8 @@ eth = WIZNET5K(spi_bus, cs, is_dhcp=True)
 #print("MAC Address:", [hex(i) for i in eth.mac_address])
 print("My IP address is:", eth.pretty_ip(eth.ip_address))
 
-socket.set_interface(eth)
-server = Server(socket)
+pool = get_radio_socketpool(eth)
+server = Server(pool)
 
 @server.route("/")
 def root(request: Request):
@@ -75,4 +75,4 @@ def move_mouse(request: Request, direction: str):
         return Response(request, "invalid parameter")
     return Response(request, "moved mouse cursor to %s side" % direction)
 
-server.serve_forever(str(eth.pretty_ip(eth.ip_address)))
+server.serve_forever(str(eth.pretty_ip(eth.ip_address)), port=80)
