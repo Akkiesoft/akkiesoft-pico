@@ -2,6 +2,7 @@ import config
 import utime
 import socket
 import ujson
+import machine
 
 html = """<!DOCTYPE html><html><head><title>Pico W temperature server</title></head>
 <body><h1>Pico W temperature server</h1>
