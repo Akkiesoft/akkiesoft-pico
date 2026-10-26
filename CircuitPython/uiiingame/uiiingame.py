@@ -1,18 +1,19 @@
 import board
-from digitalio import DigitalInOut, Direction, Pull
 import busio
-import displayio
-import adafruit_displayio_ssd1306
+from digitalio import DigitalInOut, Direction, Pull
+from displayio import release_displays, Group, OnDiskBitmap, TileGrid
+from i2cdisplaybus import I2CDisplayBus
+from adafruit_displayio_ssd1306 import SSD1306
 from adafruit_display_text import label
 from terminalio import FONT
 import time
 import random
 
-displayio.release_displays()
+release_displays()
 i2c = busio.I2C(board.GP21, board.GP20)
-display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
-display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=64, rotation=180)
-display.root_group = displayio.Group()
+display_bus = I2CDisplayBus(i2c, device_address=0x3c)
+display = SSD1306(display_bus, width=128, height=64, rotation=180)
+display.root_group = Group()
 splash = display.root_group
 
 btn_black = DigitalInOut(board.GP7)
@@ -53,13 +54,13 @@ def check_finger(finger):
 
 update_score()
 
-uiiin = displayio.OnDiskBitmap("/uiiin.bmp")
-tile_grid = displayio.TileGrid(uiiin, pixel_shader=uiiin.pixel_shader, x=3, y=24)
+uiiin = OnDiskBitmap("/uiiin.bmp")
+tile_grid = TileGrid(uiiin, pixel_shader=uiiin.pixel_shader, x=3, y=24)
 splash.append(tile_grid)
 
-finger = displayio.OnDiskBitmap("/finger.bmp")
-finger_left = displayio.TileGrid(finger, pixel_shader=finger.pixel_shader, x=16, y=24)
-finger_right = displayio.TileGrid(finger, pixel_shader=finger.pixel_shader, x=110, y=24)
+finger = OnDiskBitmap("/finger.bmp")
+finger_left = TileGrid(finger, pixel_shader=finger.pixel_shader, x=16, y=24)
+finger_right = TileGrid(finger, pixel_shader=finger.pixel_shader, x=110, y=24)
 splash.append(finger_left)
 splash.append(finger_right)
 
